@@ -2,6 +2,13 @@
 
 Example of a custom implementation of event sourcing infrastructure with multi-tenancy support.
 
+## Database migrations
+
+```shell
+dotnet ef migrations add Initial -c MasterDbContext -o ./Persistence/Master/Migrations
+dotnet ef migrations add Initial -c TenantDbContext -o ./Persistence/Tenant/Migrations
+```
+
 ## Setup
 
 1. Start postgres container using command bellow
@@ -27,7 +34,8 @@ Example of a custom implementation of event sourcing infrastructure with multi-t
 
 3. Create databases
    ```shell
-   TODO
+   dotnet ef database update -c MasterDbContext
+   dotnet ef database update -c TenantDbContext
    ```
 
 4. Run the application
