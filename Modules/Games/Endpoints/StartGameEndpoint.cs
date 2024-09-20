@@ -1,48 +1,40 @@
-// using EventSourcing.Events;
-// using EventSourcing.MultiTenancy;
-// using EventSourcing.Persistence;
-// using EventSourcing.Persistence.Tenant;
-// using EventSourcing.Persistence.Tenant.Entities;
-// using Marten;
-// using Microsoft.AspNetCore.Mvc;
-//
-// namespace EventSourcing.Endpoints.Games;
-//
-// public sealed class StartGameEndpoint
-// {
-//     public static async Task<IResult> Handle(
-//         [FromHeader] string tenantIdentifier,
-//         [FromServices] IDocumentStore documentStore,
-//         [FromServices] TenantContextProvider tenantContextProvider,
-//         [FromServices] ConnectionStringFactory connectionStringFactory,
-//         CancellationToken ct)
-//     {
-//         var tenant = tenantContextProvider.Current!;
-//
-//         var game = new GameEntity()
-//         {
-//             EventStreamId = Guid.NewGuid()
-//         };
-//
-//         // TODO: make sure that both operations (save game and save event) will complete succesfully
-//
-//         await using (var dbContext = new TenantDbContext(connectionStringFactory.CreateForTenantDbContext(tenant.Identifier)))
-//         {
-//             dbContext.Add(game);
-//             await dbContext.SaveChangesAsync(ct);
-//         }
-//
-//         await using (var session = documentStore.LightweightSession(tenant.Identifier))
-//         {
-//             var gameEvent = new GameStartedEvent()
-//             {
-//                 GameId = game.Id
-//             };
-//
-//             session.Events.Append(game.EventStreamId, gameEvent);
-//             await session.SaveChangesAsync(ct);
-//         }
-//
-//         return Results.Ok(game.Id);
-//     }
-// }
+using EventSourcing.Infrastructure.EventSourcing;
+using EventSourcing.Infrastructure.MultiTenancy;
+using EventSourcing.Modules.Games.Events;
+using EventSourcing.Persistence.Tenant;
+using EventSourcing.Persistence.Tenant.Entities;
+using Microsoft.AspNetCore.Mvc;
+
+namespace EventSourcing.Modules.Games.Endpoints;
+
+public sealed class StartGameEndpoint
+{
+    public static async Task<IResult> Handle(
+        [FromServices] TenantDbContextFactory tenantDbContextFactory,
+        [FromServices] TenantContextProvider tenantContextProvider,
+        CancellationToken ct)
+    {
+        var tenant = tenantContextProvider.Current;
+
+        var game = new GameEntity()
+        {
+            EventStreamId = Guid.NewGuid()
+        };
+
+        await using (var dbContext = tenantDbContextFactory.Create(tenant.Identifier))
+        {
+            dbContext.Add(game);
+            await dbContext.SaveChangesAsync(ct);
+
+            var gameEvent = new GameStartedGameEvent()
+            {
+                GameId = game.Id
+            };
+
+            dbContext.Events.AppendEvent(gameEvent, game.EventStreamId);
+            await dbContext.SaveChangesAsync(ct);
+        }
+
+        return Results.Ok(game.Id);
+    }
+}

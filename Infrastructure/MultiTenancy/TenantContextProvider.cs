@@ -5,6 +5,8 @@ namespace EventSourcing.Infrastructure.MultiTenancy;
 
 public sealed class TenantContextProvider
 {
+    private TenantContext? _current;
+
     private readonly MasterDbContext _masterDbContext;
 
     public TenantContextProvider(MasterDbContext masterDbContext)
@@ -12,7 +14,7 @@ public sealed class TenantContextProvider
         _masterDbContext = masterDbContext;
     }
 
-    public TenantContext? Current { get; private set; }
+    public TenantContext Current => _current ?? throw new Exception("Attempting to access tenant context before initialization!");
 
     public async Task InitializeAsync(string tenantIdentifier)
     {
@@ -25,7 +27,7 @@ public sealed class TenantContextProvider
             throw new Exception($"Tenant with identifier '{tenantIdentifier}' does not exist!");
         }
 
-        Current = new TenantContext(
+        _current = new TenantContext(
             tenant.Id,
             tenant.Name,
             tenant.Identifier);

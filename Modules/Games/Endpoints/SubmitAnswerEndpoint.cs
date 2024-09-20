@@ -1,58 +1,32 @@
-// using EventSourcing.Events;
-// using EventSourcing.MultiTenancy;
-// using EventSourcing.Persistence;
-// using Marten;
-// using Microsoft.AspNetCore.Mvc;
-//
-// namespace EventSourcing.Endpoints.Games;
-//
-// public sealed class SubmitAnswerEndpoint
-// {
-//     public static IResult Handle(
-//         [FromRoute] int instanceId,
-//         [FromBody] SubmitAnswerRequest req,
-//         [FromServices] IDocumentStore documentStore,
-//         [FromServices] TenantContextProvider tenantContextProvider,
-//         [FromServices] ILogger<SubmitAnswerEndpoint> logger,
-//         CancellationToken ct)
-//     {
-//         var tenant = tenantContextProvider.Current;
-//         
-//         var game = dbContext
-//             .Games
-//             .Find(instanceId);
-//
-//         if (instance is null)
-//         {
-//             throw new Exception($"Instance with id '{instanceId}' does not exist!");
-//         }
-//
-//         // TODO: create a session on database specified by tenant.Database
-//         using (var session = documentStore.LightweightSession())
-//         {
-//             var instanceAggregate = session
-//                 .Events
-//                 .AggregateStream<InstanceAggregate>(instance.EventStreamId)!;
-//
-//             logger.LogInformation("Instance state: {Aggregate}", instanceAggregate);
-//
-//             if (instanceAggregate.IsTerminated)
-//             {
-//                 throw new Exception($"Instance with id '{instanceId}' was terminated!");
-//             }
-//
-//             var instanceEvent = new AnswerSubmittedEvent()
-//             {
-//                 InstanceId = instanceId,
-//                 Text = req.Text
-//             };
-//
-//             session.Events.Append(instance.EventStreamId, instanceEvent);
-//             session.SaveChanges();
-//         }
-//
-//         return Results.Ok();
-//     }
-// }
-//
-// public record SubmitAnswerRequest(string Text);
+using EventSourcing.Infrastructure.MultiTenancy;
+using EventSourcing.Persistence.Tenant;
+using Microsoft.AspNetCore.Mvc;
+
+namespace EventSourcing.Modules.Games.Endpoints;
+
+public sealed class SubmitAnswerEndpoint
+{
+    public static async Task<IResult> Handle(
+        [FromRoute] int instanceId,
+        [FromBody] SubmitAnswerRequest req,
+        [FromServices] TenantDbContextFactory tenantDbContextFactory,
+        [FromServices] TenantContextProvider tenantContextProvider,
+        CancellationToken ct)
+    {
+        var tenant = tenantContextProvider.Current;
+
+        using (var dbContext = tenantDbContextFactory.Create(tenant.Identifier))
+        {
+            // var game = dbContext.Events.Aggregate<GameAggregate>();
+            // if (game.IsTerminated) {...}
+
+            // dbContext.Events.Add();
+            
+            await dbContext.SaveChangesAsync(ct);
+        }
+
+        return Results.Ok();
+    }
+}
+
+public record SubmitAnswerRequest(string Text);

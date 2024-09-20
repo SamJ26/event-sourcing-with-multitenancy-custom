@@ -1,4 +1,4 @@
-using EventSourcing.Events;
+using EventSourcing.Modules.Games.Events;
 
 namespace EventSourcing;
 
@@ -8,17 +8,17 @@ public sealed class GameAggregate
     public bool IsTerminated { get; private set; }
     public string Answer { get; private set; } = null!;
 
-    public void Apply(GameStartedEvent e)
+    public void Apply(GameStartedGameEvent e)
     {
         Id = e.GameId;
     }
 
-    public void Apply(GameAnswerSubmittedEvent e)
+    public void Apply(GameAnswerSubmittedGameEvent e)
     {
         Answer = e.Text;
     }
 
-    public void Apply(GameTerminatedEvent _)
+    public void Apply(GameTerminatedGameEvent _)
     {
         IsTerminated = true;
     }
